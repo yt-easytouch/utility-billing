@@ -24,7 +24,7 @@ def get_columns():
 		{"label": "Bedrooms", "fieldname": "bedrooms", "fieldtype": "Int", "width": 100},
 		{"label": "Bathrooms", "fieldname": "bathrooms", "fieldtype": "Int", "width": 100},
 		{"label": "Unit Size (sqft)", "fieldname": "unit_size", "fieldtype": "Float", "width": 120},
-		{"label": "Floor Level", "fieldname": "floor_level", "fieldtype": "Link", "options": "Floor Level", "width": 120},
+		{"label": "Floor Level", "fieldname": "floor_level", "fieldtype": "Data", "width": 120},
 	]
 
 def get_data(filters):
