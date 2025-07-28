@@ -76,7 +76,7 @@ def get_report_summary(data):
     return [
         {"label": "Total Properties", "value": total_properties, "indicator": "blue"},
         {"label": "Available Units", "value": available_units, "indicator": "green"},
-        {"label": "Total Asset Value", "value": f"KES {total_value:,.2f}", "indicator": "orange"},
+        {"label": "Total Asset Value", "value": f"{total_value:,.2f}", "indicator": "orange"},
     ]
 
 def get_chart_data(data):
