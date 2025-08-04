@@ -34,10 +34,13 @@ class UtilityServiceRequest(Document):
         self.status = "To Bill"
         
     def on_submit(self):
+        
         settings = frappe.get_doc("Utility Billing Settings", "Utility Billing Settings")
         if settings.create_customer_from_utility_service_request_on_submit:
             make_customer(self.name)
-            
+        self.update_requested_properties()
+    def on_update_after_submit(self):
+        self.update_requested_properties()
     def validate_items(self):
         if not self.items:
             if not self.utility_bill_structure:
@@ -55,7 +58,16 @@ class UtilityServiceRequest(Document):
                 for field, value in dimensions.items():
                     if hasattr(self, field):
                         self.set(field, value)
-                        
+    def update_requested_properties(self):
+        
+        if self.requested_properties:
+            for row in self.requested_properties:
+                if row.is_active:
+                    utility_property_status = frappe.db.get_value("Utility Property",row.utility_property, "status")
+                    if utility_property_status=="Available":
+                        frappe.db.set_value("Utility Property", row.utility_property, "status", "Reserved")
+            frappe.db.commit()
+            
     def validate_contract_dates(self):
         if self.start_date and self.end_date and getdate(self.start_date) > getdate(self.end_date):
             frappe.throw("Contract start date cannot be after the end date.")
@@ -255,7 +267,7 @@ def create_sales_order(doc, customer_doc):
 
 
 @frappe.whitelist()
-def create_site_survey(docname):
+def create_site_survey(docname,utility_property):
     """Create a site survey as an issue for the utility service request."""
     doc = frappe.get_doc("Utility Service Request", docname)
     request_type_description = frappe.db.get_value(
@@ -271,7 +283,7 @@ def create_site_survey(docname):
     issue_doc.utility_service_request = docname
     issue_doc.issue_type = doc.request_type
     issue_doc.customer = doc.customer
-    issue_doc.utility_property = doc.utility_property
+    issue_doc.utility_property = utility_property
 
     issue_doc.insert()
 
@@ -297,7 +309,7 @@ def check_request_status(request_name):
     issues = frappe.get_list(
         "Issue", 
         filters={"utility_service_request": request_name}, 
-        pluck="docstatus",
+        pluck="status",
         ignore_permissions=1
     )
 
@@ -307,6 +319,7 @@ def check_request_status(request_name):
         pluck="docstatus",
         ignore_permissions=1
     )
+    
 
     status = frappe.get_doc("Utility Service Request", request_name).request_status
 

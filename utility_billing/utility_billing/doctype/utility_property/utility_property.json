@@ -330,8 +330,9 @@
   },
   {
    "fieldname": "floor_level",
-   "fieldtype": "Data",
-   "label": "Floor Level"
+   "fieldtype": "Link",
+   "label": "Floor Level",
+   "options": "Floor Level"
   },
   {
    "fieldname": "lot_size",
@@ -370,7 +371,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2025-07-16 17:22:30.743196",
+ "modified": "2025-08-04 19:43:37.158598",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Property",
@@ -410,7 +411,7 @@
    "role": "Property User"
   }
  ],
- "row_format": "Dynamic",
+ "search_fields": "status,floor_level",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [

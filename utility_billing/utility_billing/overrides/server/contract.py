@@ -10,7 +10,7 @@ def before_submit(doc: Document, method: str) -> None:
         utility_property = entry.utility_property
         if utility_property and entry.is_active:
             status = frappe.db.get_value("Utility Property", utility_property, "status")
-            if status != "Available":
+            if status != "Available" and status != "Reserved":
                 frappe.throw(_("Utility Property {0} is not available. Current status: {1}. It must be available to submit the contract.").format(utility_property, status))
             
 @frappe.whitelist()
@@ -60,7 +60,7 @@ def on_update_after_submit(doc: Document, method: str) -> None:
         #     )
         #     return
 
-        if current_status == "Active" and entry.is_active:
+        if (current_status == "Active" or "Reserved") and entry.is_active:
             frappe.db.set_value("Utility Property", utility_property, "status", "Occupied")
             continue
 

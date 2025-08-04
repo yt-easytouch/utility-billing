@@ -249,6 +249,7 @@
   },
   {
    "allow_bulk_edit": 1,
+   "allow_on_submit": 1,
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
@@ -358,6 +359,7 @@
    "options": "Payment Terms Template"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "utility_bill_structure",
    "fieldtype": "Link",
    "label": "Utility Bill Structure",
@@ -504,8 +506,8 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-16 17:49:37.634529",
- "modified_by": "chege@arians.co.ke",
+ "modified": "2025-08-04 19:42:38.053900",
+ "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Service Request",
  "naming_rule": "By \"Naming Series\" field",
@@ -569,7 +571,6 @@
    "role": "Property User"
   }
  ],
- "row_format": "Dynamic",
  "search_fields": "party_name,customer_group,territory,request_type,nrcpassport_no",
  "show_title_field_in_link": 1,
  "sort_field": "creation",

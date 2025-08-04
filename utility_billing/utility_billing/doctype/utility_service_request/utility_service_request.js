@@ -10,6 +10,7 @@ frappe.ui.form.on("Utility Service Request", {
 
 		if (!frm.is_new()) {
 			frappe.contacts.render_address_and_contact(frm);
+			
 			frappe.call({
 				method: "utility_billing.utility_billing.doctype.utility_service_request.utility_service_request.check_request_status",
 				args: {
@@ -25,7 +26,7 @@ frappe.ui.form.on("Utility Service Request", {
 				},
 			});
 		}
-		if (!frm.doc.date) {
+		if (frm.is_new()) {
 			let currentDate = frappe.datetime.nowdate();
 			frm.set_value("date", currentDate);
 		}
@@ -477,6 +478,7 @@ function calculate_amount(frm, cdt, cdn) {
 }
 
 function open_bom_creation_modal(frm) {
+	
 	const modal = new frappe.ui.Dialog({
 		title: __("Create BOM"),
 		fields: [
@@ -1101,24 +1103,54 @@ async function addActionButtons(frm) {
 	}
 
 	if (currentStatus === "" && settings?.enable_site_survey == 1) {
-		frm.add_custom_button(
-			__("Site Survey"),
+	frm.add_custom_button(
+    __("Site Survey"),
 			function () {
-				frappe.call({
-					method: "utility_billing.utility_billing.doctype.utility_service_request.utility_service_request.create_site_survey",
-					args: {
-						docname: frm.doc.name,
-					},
-					callback: function (response) {
-						handle_response(response, __("Site Survey"), frm);
-						if (response && response.message) {
-							frappe.set_route("Form", "Issue", response.message.issue);
+				frappe.prompt(
+					[
+						{
+							fieldname: "utility_property",
+							label: __("Property"),
+							fieldtype: "Link",
+							options: "Utility Property",
+							get_query: () => {
+								const properties = (frm.doc.requested_properties || [])
+									.map(p => p.utility_property)
+									.filter(Boolean);
+
+								if (!properties.length) {
+									return {};
+								}
+
+								return {
+									filters: [["name", "in", properties]],
+								};
+							},
+							reqd: 1,
 						}
+					],
+					function (values) {
+						frappe.call({
+							method: "utility_billing.utility_billing.doctype.utility_service_request.utility_service_request.create_site_survey",
+							args: {
+								docname: frm.doc.name,
+								utility_property: values.utility_property,
+							},
+							callback: function (response) {
+								handle_response(response, __("Site Survey"), frm);
+								if (response && response.message) {
+									frappe.set_route("Form", "Issue", response.message.issue);
+								}
+							},
+						});
 					},
-				});
+					__("Select Property"),
+					__("Create Site Survey")
+				);
 			},
 			__("Create")
 		);
+	} else if (currentStatus === "Site Survey Completed" && settings?.enable_site_survey == 0) {
 	} else if (currentStatus === "Site Survey Completed" && settings?.enable_site_survey == 1) {
 		frm.add_custom_button(
 			__("BOM"),
