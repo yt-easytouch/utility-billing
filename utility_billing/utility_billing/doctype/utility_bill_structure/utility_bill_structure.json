@@ -6,12 +6,14 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "title",
   "naming_series",
   "fiscal_year",
   "company",
   "column_break_xsni",
   "start_date",
   "end_date",
+  "is_active",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -41,6 +43,7 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Naming Series",
    "options": "UBS-.YYYY.-"
   },
@@ -126,9 +129,21 @@
    "fieldtype": "Link",
    "label": "Company",
    "options": "Company"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
- "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [
@@ -138,7 +153,7 @@
    "link_fieldname": "utility_bill_structure"
   }
  ],
- "modified": "2025-06-10 12:38:15.315941",
+ "modified": "2025-08-05 15:47:44.473367",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Bill Structure",
@@ -203,8 +218,9 @@
    "role": "Property User"
   }
  ],
- "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }

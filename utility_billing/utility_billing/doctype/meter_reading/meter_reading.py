@@ -111,6 +111,35 @@ def create_sales_order(meter_reading):
 
 
 @frappe.whitelist()
+def get_open_reading(item_code, customer, meter_number=None):
+    """Fetch the latest reading for the specified customer, item, and optional meter number."""
+
+    SalesInvoiceMeterReading = DocType("Sales Invoice Meter Reading")
+    SalesInvoice = DocType("Sales Invoice")
+
+    query = (
+        frappe.qb.from_(SalesInvoiceMeterReading)
+        .join(SalesInvoice)
+        .on(SalesInvoice.name == SalesInvoiceMeterReading.parent)
+        .select(SalesInvoiceMeterReading.current_reading)
+        .where(SalesInvoice.customer == customer)
+        .where(SalesInvoiceMeterReading.item_code == item_code)
+        .where(SalesInvoice.docstatus == 1)
+    )
+
+    if meter_number:
+        query = query.where(SalesInvoiceMeterReading.meter_number == meter_number)
+    else:
+        query = query.where(SalesInvoiceMeterReading.meter_number.isnull())
+
+    query = query.orderby(SalesInvoiceMeterReading.creation, order=Order.desc)
+    result = query.limit(1).run()
+
+    return result[0][0] if result else 0
+
+
+
+@frappe.whitelist()
 def get_previous_invoice_reading(item_code, customer, meter_number=None):
     """Fetch the latest reading for the specified customer, item, and optional meter number."""
 
@@ -161,7 +190,7 @@ def get_serial_numbers_from_warranty_claims(customer):
         "Warranty Claim",
         filters={
             "customer": customer,
-            "status": "Closed",
+            "status": "Open",
         },
         fields=["serial_no"],
     )

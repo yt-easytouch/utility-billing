@@ -25,7 +25,7 @@ frappe.ui.form.on("Utility Service Request", {
 				},
 			});
 		}
-		if (!frm.doc.date) {
+		if (frm.is_new()) {
 			let currentDate = frappe.datetime.nowdate();
 			frm.set_value("date", currentDate);
 		}

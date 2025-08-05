@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-08-05 15:33:44.674758",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "meter_number",
+  "open_reading",
+  "date_reading"
+ ],
+ "fields": [
+  {
+   "allow_in_quick_entry": 1,
+   "allow_on_submit": 1,
+   "fieldname": "meter_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Meter Number",
+   "options": "Serial No",
+   "reqd": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "allow_on_submit": 1,
+   "fieldname": "date_reading",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date Reading"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "allow_on_submit": 1,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "link_filters": "[[\"Item\",\"is_utility_item\",\"=\",1]]",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "allow_on_submit": 1,
+   "fieldname": "open_reading",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Open Reading"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-08-05 15:45:13.189639",
+ "modified_by": "Administrator",
+ "module": "Utility Billing",
+ "name": "OpenMeter Reading",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

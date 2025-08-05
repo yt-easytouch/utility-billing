@@ -125,7 +125,7 @@ frappe.ui.form.on("Meter Reading Item", {
 function update_meter_number_query(frm) {
 	frappe.db
 		.get_list("Warranty Claim", {
-			filters: { status: "Closed", customer: frm.doc.customer },
+			filters: { status: "Open", customer: frm.doc.customer },
 			fields: ["serial_no"],
 		})
 		.then((warrantyClaims) => {

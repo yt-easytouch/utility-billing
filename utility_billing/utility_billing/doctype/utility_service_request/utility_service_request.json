@@ -51,6 +51,7 @@
   "contract_length_months",
   "requested_properties_section",
   "requested_properties",
+  "openmeter_reading",
   "contract_terms_section",
   "contract_template",
   "contract_terms",
@@ -252,6 +253,7 @@
   },
   {
    "allow_bulk_edit": 1,
+   "allow_on_submit": 1,
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
@@ -361,6 +363,7 @@
    "options": "Payment Terms Template"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "utility_bill_structure",
    "fieldtype": "Link",
    "label": "Utility Bill Structure",
@@ -487,6 +490,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "description": "The number of months the contract will run from the Start Date. ",
    "fieldname": "contract_length_months",
    "fieldtype": "Float",
@@ -528,12 +532,19 @@
    "fieldtype": "Table",
    "label": "Fulfilment Terms",
    "options": "Contract Fulfilment Checklist"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "openmeter_reading",
+   "fieldtype": "Table",
+   "label": "OpenMeter Reading",
+   "options": "OpenMeter Reading"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-05 19:54:10.424800",
+ "modified": "2025-08-05 15:38:37.096016",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Service Request",
@@ -598,12 +609,12 @@
    "role": "Property User"
   }
  ],
- "row_format": "Dynamic",
  "search_fields": "party_name,customer_group,territory,request_type,nrcpassport_no",
  "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "party_name",
+ "track_changes": 1,
  "translated_doctype": 1
 }
