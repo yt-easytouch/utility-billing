@@ -59,13 +59,23 @@ class MeterReading(Document):
 
 def create_sales_order(meter_reading):
     """Create a Sales Order based on the Meter Reading."""
+    # sales_order = frappe.get_doc(
+    #     {
+    #         "doctype": "Sales Order",
+    #         "customer": meter_reading.customer,
+    #         "meter_readings": [],
+    #         "items": [],
+    #         "order_type": "Sales",
+    #         "selling_price_list": meter_reading.price_list,
+    #     }
+    # )  
     sales_order = frappe.get_doc(
         {
-            "doctype": "Sales Order",
+            "doctype": "Sales Invoice",
             "customer": meter_reading.customer,
             "meter_readings": [],
             "items": [],
-            "order_type": "Sales",
+            # "order_type": "Sales",
             "selling_price_list": meter_reading.price_list,
         }
     )
@@ -140,7 +150,7 @@ def get_open_reading(item_code, customer, meter_number=None):
 
 
 @frappe.whitelist()
-def get_previous_invoice_reading(item_code, customer, meter_number=None):
+def get_previous_invoice_reading(item_code, customer, meter_number=None , date =None):
     """Fetch the latest reading for the specified customer, item, and optional meter number."""
 
     SalesInvoiceMeterReading = DocType("Sales Invoice Meter Reading")
@@ -163,9 +173,38 @@ def get_previous_invoice_reading(item_code, customer, meter_number=None):
 
     query = query.orderby(SalesInvoiceMeterReading.creation, order=Order.desc)
     result = query.limit(1).run()
+    
+    if result:
+        return result[0][0]
+    else:
+        meter_assign = find_meter_assign(item_code,meter_number)
+        if not meter_assign:
+            return 0
+        filters = {
+        "parent": meter_assign.utility_service_request,
+        "meter_number": meter_number,
+        "item_code": item_code
+        }
+        open_reading = frappe.get_value("OpenMeter Reading", filters, "open_reading")
+        return open_reading if open_reading else 0
 
-    return result[0][0] if result else 0
+def find_meter_assign(item_code=None, meter_number=None):
+    filters = {
+        "status": "Open"
+    }
+    if item_code:
+        filters["item_code"] = item_code
+    if meter_number:
+        filters["serial_no"] = meter_number
+    result = frappe.get_all(
+        "Meter Assign",
+        filters=filters,
+        fields=["customer","utility_service_request","serial_no", "item_code", "status", "postdate"],
+        limit=1,
+        order_by="creation asc"
+    )
 
+    return result[0] if result else None
 
 @frappe.whitelist()
 def get_customer_details(customer):
@@ -200,3 +239,71 @@ def get_serial_numbers_from_warranty_claims(customer):
             serial_list.extend(claim["serial_no"].split("\n"))
 
     return list(set(serial_list))
+
+@frappe.whitelist()
+def inset_data(doc):
+    import json
+    doc = json.loads(doc)
+
+    # Validate meter_assign
+    meter_assign = frappe.get_doc("Meter Assign", doc.get('meter_assign'))
+    if not meter_assign:
+        frappe.throw("Meter Assign not found")
+
+    # Find existing draft Meter Reading for this customer and utility property
+    existing_doc_name = frappe.db.get_value('Meter Reading',
+                                           filters={
+                                               'customer': meter_assign.customer,
+                                            #    'utility_property': meter_assign.utility_service_request,
+                                               'docstatus': '0'
+                                           },
+                                           fieldname='name') 
+    price_list = frappe.db.get_value('Utility Service Request',
+                                           filters={
+                                               'name': meter_assign.utility_service_request,
+                                           },
+                                           fieldname='price_list')
+
+    if existing_doc_name:
+        meter_reading = frappe.get_doc('Meter Reading', existing_doc_name)
+
+        # Check if item with item_code and meter_number exists in child table
+        existing_item = None
+        for item in meter_reading.items:
+            if item.item_code == meter_assign.item_code and item.meter_number ==  meter_assign.serial_no:
+                existing_item = item
+                break
+        
+        if existing_item:
+            # Update existing item reading
+            existing_item.current_reading = doc.get('reading_value')
+        else:
+            # Append new item
+            meter_reading.append('items', {
+                'item_code': meter_assign.item_code,
+                'meter_number': meter_assign.serial_no,
+                'current_reading': doc.get('reading_value'),
+            })
+
+        meter_reading.save()
+        frappe.db.commit()
+        return {"message": "Existing draft updated", "docname": meter_reading.name}
+
+    else:
+        # Create new Meter Reading draft with the first item
+        new_doc = frappe.get_doc({
+            "doctype": "Meter Reading",
+            "customer": meter_assign.customer,
+            "date":  frappe.utils.nowdate(),
+            "price_list":  price_list,
+            # "utility_property": meter_assign.utility_service_request,
+            # "docstatus": "Draft",
+            "items": [{
+                'item_code': meter_assign.item_code,
+                'meter_number': meter_assign.serial_no,
+                'current_reading': doc.get('reading_value'),
+            }]
+        })
+        new_doc.insert()
+        frappe.db.commit()
+        return {"message": "New draft created", "docname": new_doc.name}

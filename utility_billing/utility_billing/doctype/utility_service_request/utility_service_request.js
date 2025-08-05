@@ -86,8 +86,8 @@ frappe.ui.form.on("Utility Service Request", {
 		let closedWarrantySerials = [];
 
 		frappe.db
-			.get_list("Warranty Claim", {
-				filters: { status: "Closed" },
+			.get_list("Meter Assign", {
+				filters: { status: "Open" },
 				fields: ["serial_no"],
 			})
 			.then((warrantyClaims) => {

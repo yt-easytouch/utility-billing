@@ -37,6 +37,37 @@ class UtilityServiceRequest(Document):
         settings = frappe.get_doc("Utility Billing Settings", "Utility Billing Settings")
         if settings.create_customer_from_utility_service_request_on_submit:
             make_customer(self.name)
+        self.update_requested_properties()
+    def on_update_after_submit(self):
+        self.update_requested_properties()
+    def update_requested_properties(self):
+        
+        if self.requested_properties:
+            for row in self.requested_properties:
+                if row.is_active:
+                    utility_property_status = frappe.db.get_value("Utility Property",row.utility_property, "status")
+                    if utility_property_status=="Available":
+                        frappe.db.set_value("Utility Property", row.utility_property, "status", "Reserved")
+        current_meter_serials = set()
+        if self.openmeter_reading:
+            for item in self.openmeter_reading:
+                current_meter_serials.add(item.meter_number)
+                existing = frappe.get_all(
+                    "Meter Assign",
+                    filters={
+                        "utility_service_request": self.name,
+                        "serial_no": item.meter_number,
+                        "item_code": item.item_code,
+                        "status": "Open"
+                    },
+                    fields=["name"]
+                )
+                if not existing:
+                    create_meter_assign(self.name,self.customer_name, item.meter_number, item.item_code)
+
+        # Close old meters not in the new list
+        close_old_meter_assignments(self.name, current_meter_serials)
+        frappe.db.commit()
             
     def validate_items(self):
         if not self.items:
@@ -372,16 +403,32 @@ def bom_new_version(bom):
     return frappe.copy_doc(bom)
 
 
-def create_warranty_claim(customer_doc, serial_number, item_code):
-    warranty_claim = frappe.new_doc("Warranty Claim")
-    warranty_claim.customer = customer_doc.name
-    warranty_claim.complaint = customer_doc.name
-    warranty_claim.serial_no = serial_number
-    warranty_claim.item_code = item_code
-    warranty_claim.complaint_date = nowdate()
-    warranty_claim.status = "Closed"
-    warranty_claim.save()
-    return warranty_claim
+def create_meter_assign(utility_service_request,customer, serial_number, item_code):
+    meter_assign = frappe.new_doc("Meter Assign")
+    meter_assign.utility_service_request = utility_service_request
+    meter_assign.customer = customer
+    meter_assign.serial_no = serial_number
+    meter_assign.item_code = item_code
+    meter_assign.postdate = nowdate()
+    meter_assign.status = "Open"
+    meter_assign.save()
+    return meter_assign
+
+
+def close_old_meter_assignments(utility_service_request, current_serials):
+    # Get all active meter assignments for this customer
+    existing_assignments = frappe.get_all(
+        "Meter Assign",
+        filters={"utility_service_request": utility_service_request, "status": "Open"},
+        fields=["name", "serial_no"]
+    )
+
+    for assign in existing_assignments:
+        if assign.serial_no not in current_serials:
+            doc = frappe.get_doc("Meter Assign", assign.name)
+            doc.status = "Closed"
+            doc.closedate = nowdate()
+            doc.save()
 
 
 @frappe.whitelist()

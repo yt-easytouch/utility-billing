@@ -194,10 +194,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "price_list",
    "fieldtype": "Link",
    "label": "Price List",
-   "options": "Price List"
+   "link_filters": "[[\"Price List\",\"currency\",\"=\",\"eval:doc.currency\"],[\"Price List\",\"selling\",\"=\",1]]",
+   "options": "Price List",
+   "reqd": 1
   },
   {
    "fieldname": "address_and_contacts_tab",
@@ -544,7 +547,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-05 15:38:37.096016",
+ "modified": "2025-08-05 22:05:15.013634",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Service Request",
