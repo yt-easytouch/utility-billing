@@ -142,6 +142,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "request_type",
    "fieldtype": "Link",
    "in_filter": 1,
@@ -344,6 +345,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "Customer",
    "fieldname": "service_request_from",
    "fieldtype": "Link",
@@ -353,6 +355,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "party_name",
    "fieldtype": "Dynamic Link",
    "label": "Party Name",
@@ -547,7 +550,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-05 22:05:15.013634",
+ "modified": "2025-08-30 19:18:01.063905",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Service Request",

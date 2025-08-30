@@ -17,6 +17,7 @@
  ],
  "fields": [
   {
+   "allow_on_submit": 1,
    "columns": 2,
    "fieldname": "utility_property",
    "fieldtype": "Link",
@@ -41,6 +42,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "columns": 1,
    "fieldname": "end_date",
    "fieldtype": "Date",
@@ -63,6 +65,7 @@
    "label": "Is Active?"
   },
   {
+   "allow_on_submit": 1,
    "columns": 2,
    "fieldname": "adjustment_rule",
    "fieldtype": "Link",
@@ -79,6 +82,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "columns": 1,
    "fieldname": "contract_length_months",
    "fieldtype": "Float",
@@ -89,6 +93,7 @@
    "label": "Length (Months)"
   },
   {
+   "allow_on_submit": 1,
    "columns": 1,
    "fieldname": "insurance",
    "fieldtype": "Link",
@@ -100,17 +105,15 @@
    "options": "Insurance"
   }
  ],
- "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-05-19 11:54:46.604438",
+ "modified": "2025-08-30 20:32:12.295079",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Contract Utility Property Item",
  "owner": "Administrator",
  "permissions": [],
- "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

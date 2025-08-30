@@ -85,12 +85,14 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
    "options": "Utility Bill Structure Item"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "total_amount",
    "fieldtype": "Currency",
    "label": "Total Amount",
@@ -153,7 +155,7 @@
    "link_fieldname": "utility_bill_structure"
   }
  ],
- "modified": "2025-08-05 15:47:44.473367",
+ "modified": "2025-08-30 19:19:43.136720",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Bill Structure",
