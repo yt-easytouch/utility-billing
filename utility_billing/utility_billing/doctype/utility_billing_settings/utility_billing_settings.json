@@ -17,10 +17,9 @@
   "column_break_rmpo",
   "create_customer_from_utility_service_request_on_submit",
   "enable_extra_rows_for_sosi_creation",
-  "demo_section",
-  "generate_demo_data",
-  "column_break_agjn",
-  "clear_demo_data"
+  "section_break_bzzo",
+  "additional_billing_type",
+  "additional_items"
  ],
  "fields": [
   {
@@ -94,29 +93,26 @@
    "label": "Enable Site Survey"
   },
   {
-   "fieldname": "demo_section",
-   "fieldtype": "Section Break",
-   "label": "Demo Data"
+   "fieldname": "section_break_bzzo",
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "generate_demo_data",
-   "fieldtype": "Button",
-   "label": "Generate Demo Data"
+   "fieldname": "additional_items",
+   "fieldtype": "Table",
+   "label": "Additional Items",
+   "options": "Utility Bill Structure Item"
   },
   {
-   "fieldname": "column_break_agjn",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "clear_demo_data",
-   "fieldtype": "Button",
-   "label": "Clear Demo Data"
+   "fieldname": "additional_billing_type",
+   "fieldtype": "Link",
+   "label": "Additional Billing Type",
+   "options": "Billing Type"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-06-09 17:54:16.495777",
+ "modified": "2025-08-31 16:07:54.288732",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Billing Settings",
@@ -168,7 +164,6 @@
    "role": "Property User"
   }
  ],
- "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

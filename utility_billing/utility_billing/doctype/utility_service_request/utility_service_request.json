@@ -256,14 +256,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "allow_bulk_edit": 1,
-   "allow_on_submit": 1,
-   "fieldname": "items",
-   "fieldtype": "Table",
-   "label": "Items",
-   "options": "Utility Service Request Item"
-  },
-  {
    "fieldname": "column_break_wxld",
    "fieldtype": "Column Break"
   },
@@ -545,12 +537,20 @@
    "fieldtype": "Table",
    "label": "OpenMeter Reading",
    "options": "OpenMeter Reading"
+  },
+  {
+   "allow_bulk_edit": 1,
+   "allow_on_submit": 1,
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Utility Service Request Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-30 19:18:01.063905",
+ "modified": "2025-08-31 15:25:39.916545",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility Service Request",

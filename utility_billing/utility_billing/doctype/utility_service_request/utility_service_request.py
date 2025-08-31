@@ -979,151 +979,293 @@ def add_comment(doctype, docname, content):
     }).insert(ignore_permissions=True)
     
 
-@frappe.whitelist()
-def bulk_generate_invoices(filters=None, year=None, month=None,
-                           posting_date=None, due_date=None, submit=0):
-    import calendar
-    from datetime import date
-    from frappe.utils import getdate, cint, cstr
+import calendar
+from datetime import date
+from typing import Optional, Callable
 
-    # ---- month window ----
-    _, last_day = calendar.monthrange(int(year), int(month))
-    month_start = date(int(year), int(month), 1)
-    month_end = date(int(year), int(month), last_day)
-    posting_date = getdate(posting_date) if posting_date else month_end
-    due_date = getdate(due_date) if due_date else posting_date
+import frappe
+from frappe.utils import getdate, cint, cstr, add_months
+from erpnext.stock.get_item_details import get_item_defaults
 
-    # ---- USR filter (adjust to your rule) ----
-    filters = {
-        "docstatus": 1,
-        "end_date": [">=", posting_date],
-    }
 
-    usrs = frappe.get_list("Utility Service Request", filters=filters, pluck="name", limit_page_length=0)
-    if not usrs:
-        return {"success": [], "failed": [], "skipped": [], "msg": "No records match the filters"}
+# ---------------------------- helpers ----------------------------
 
+def _month_window(y: int, m: int) -> tuple[date, date]:
+    last_day = calendar.monthrange(y, m)[1]
+    return date(y, m, 1), date(y, m, last_day)
+
+def _last_day_of_month(d: date) -> date:
+    ld = calendar.monthrange(d.year, d.month)[1]
+    return date(d.year, d.month, ld)
+
+def _invoice_exists_for_period(usr_name: str, p_start: date, p_end: date) -> Optional[str]:
+    names = frappe.get_all(
+        "Sales Invoice",
+        filters={
+            "utility_service_request": usr_name,
+            "docstatus": ["<", 2],
+            "from_date": ["<=", p_end],
+            "to_date": [">=", p_start],
+        },
+        pluck="name",
+        limit_page_length=1,
+    )
+    return names[0] if names else None
+
+def _property_already_billed(usr_name: str, utility_property: str,
+                             p_start: date, p_end: date, billing_type: str) -> bool:
+    parents = frappe.get_all(
+        "Sales Invoice",
+        filters={
+            "utility_service_request": usr_name,
+            "docstatus": ["<", 2],
+            "from_date": ["<=", p_end],
+            "to_date": [">=", p_start],
+            "custom_billing_type": billing_type,
+        },
+        pluck="name",
+    )
+    if not parents:
+        return False
+    count = frappe.db.count(
+        "Sales Invoice Item",
+        filters={
+            "parent": ["in", parents],
+            "parenttype": "Sales Invoice",
+            "utility_property": utility_property,
+        },
+    )
+    return count > 0
+
+
+# --------------------- core sub-frappe function ---------------------
+
+def _generate_for_billing_type(
+    *,
+    year: int,
+    month: int,
+    posting_date: Optional[str],
+    due_date: Optional[str],
+    submit: int,
+    billing_type: str,
+    build_items: Callable[[dict, str, date, date], list[dict]],
+    per_usr_guard: bool = True,
+    billing_cycle: int ,
+) -> dict:
+    """
+    Internal generator used by public whitelisted wrappers.
+    - build_items(usr_doc, utility_property, eff_start, eff_end) -> list of child item dicts
+    - per_usr_guard: when True, we first block if ANY invoice overlaps (USR-level), then per-property.
+    """
     success, failed, skipped = [], [], []
 
-    # Helper: does an SI for this USR/month already exist (not cancelled)?
-    def invoice_exists_for_period(usr_name: str) -> str | None:
-        names = frappe.get_all(
-            "Sales Invoice",
-            filters={
-                "utility_service_request": usr_name,
-                "from_date": month_start,
-                "to_date": month_end,
-                "docstatus": ["<", 2],  # 0 Draft, 1 Submitted
-            },
-            pluck="name",
-            limit_page_length=1,
-        )
-        return names[0] if names else None
+    year = int(year)
+    month = int(month)
+    submit = cint(submit)
 
-    # Helper: for property-level duplicate check (optional)
-    def property_already_billed(usr_name: str, utility_property: str) -> bool:
-        # Look for any SI in that month for this USR where any child item has this property
-        existing_parents = frappe.get_all(
-            "Sales Invoice",
-            filters={
-                "utility_service_request": usr_name,
-                "from_date": month_start,
-                "to_date": month_end,
-                "docstatus": ["<", 2],
-            },
-            pluck="name",
-        )
-        if not existing_parents:
-            return False
-        # If you added a custom field "utility_property" on Sales Invoice Item:
-        count = frappe.db.count(
-            "Sales Invoice Item",
-            filters={
-                "parent": ["in", existing_parents],
-                "parenttype": "Sales Invoice",
-                "utility_property": utility_property,
-            },
-        )
-        return count > 0
+    month_start, month_end = _month_window(year, month)
+    p_date = getdate(posting_date) if posting_date else month_end
+    d_date = getdate(due_date) if due_date else p_date
+
+    usrs = frappe.get_list("Utility Service Request", filters={"docstatus": 1}, pluck="name", limit_page_length=0)
+    if not usrs:
+        return {"success": [], "failed": [], "skipped": [], "msg": "No Utility Service Requests found"}
+
+    created_rows = []
 
     for name in usrs:
         try:
-            # 1) whole-USR duplicate?
-            existing = invoice_exists_for_period(name)
-            if existing:
-                skipped.append({"usr": name, "reason": f"Invoice already exists ({existing}) for {month_start}–{month_end}"})
-                continue
-
             usr = frappe.get_doc("Utility Service Request", name)
-            if not usr.items:
-                skipped.append({"usr": name, "reason": "No items (Utility Bill Structure empty)"})
+            props = usr.get("requested_properties") or []
+            if not props:
+                skipped.append({"usr": name, "reason": "No requested properties"})
                 continue
 
-            props = usr.get("requested_properties") or []
+            any_added = False
+            invoice_from = None
+            invoice_to = None
 
-            # Build one invoice per USR (containing only not-yet-billed properties)
-            si = frappe.get_doc({
-                "doctype": "Sales Invoice",
-                "utility_service_request": usr.name,
-                "customer": usr.customer,
-                "customer_name": usr.customer_name,
-                "company": usr.company,
-                "posting_date": posting_date,
-                "due_date": due_date,
-                "from_date": month_start,
-                "to_date": month_end,
-                "items": []
-            })
-
-            eligible_props = 0
             for prop in props:
                 is_active = cint(getattr(prop, "is_active", 0))
                 prop_name = getattr(prop, "utility_property", None)
                 prop_start = getdate(getattr(prop, "start_date", None)) if getattr(prop, "start_date", None) else None
-                prop_end = getdate(getattr(prop, "end_date", None)) if getattr(prop, "end_date", None) else None
+                prop_end_field = getdate(getattr(prop, "end_date", None)) if getattr(prop, "end_date", None) else None
+                billing_cycle_number = billing_cycle or cint(getattr(prop, "billing_cycle", 0)) or 1  # default 1 month if empty
 
                 if not is_active or not prop_name:
                     continue
-                # Overlap with month
-                if prop_start and prop_start > month_end:
-                    continue
-                if prop_end and prop_end < month_start:
-                    continue
-                # 2) property-level duplicate?
-                if property_already_billed(usr.name, prop_name):
-                    # already billed this property in this month → skip just this property
+
+               # contract window (still respects start/end dates if given)
+                contract_start = prop_start or month_start
+                contract_end = prop_end_field or None
+
+                # invoice window based on billing cycle
+                invoice_start = month_start
+                invoice_end = add_months(month_start, billing_cycle_number) - timedelta(days=1)
+
+                # clamp to contract start/end if available
+                eff_start = max(invoice_start, contract_start)
+                eff_end = min(invoice_end, contract_end) if contract_end else invoice_end
+
+                # skip if no valid period
+                if eff_start > eff_end:
                     continue
 
-                eligible_props += 1
-                for row in usr.items:
-                    si.append("items", {
-                        "item_code": row.get("item_code"),
-                        "description": (row.get("item_name") or row.get("item_code") or "") +
-                                       (f" — Property: {prop_name}" if prop_name else ""),
-                        "qty": row.get("quantity") or 1,
-                        "rate": row.get("rate"),
-                        "delivery_date": row.get("delivery_date") or month_end,
-                        # requires a custom Link field on Sales Invoice Item (optional but recommended)
-                        # "utility_property": prop_name,
-                        "uom": row.get("uom"),
-                        "conversion_factor": row.get("conversion_factor"),
-                        "cost_center": getattr(row, "cost_center", None) or getattr(usr, "cost_center", None),
-                        "income_account": getattr(row, "income_account", None),
-                    })
+                
+                
+                # print(f"USR {name}, Property {prop_name}: contract {contract_start}–{contract_end} ")
+                # print(f"  => effective {eff_start}–{eff_end} within month {month_start}–{month_end}")
+                # print("__" * 100)
+                # return
 
-            if eligible_props == 0:
-                skipped.append({"usr": name, "reason": "No eligible properties to bill (already billed or out of period)"})
+                # per-USR global guard (optional)
+                if per_usr_guard and not any_added:
+                    existing = _invoice_exists_for_period(usr.name, eff_start, eff_end)
+                    if existing:
+                        skipped.append({"usr": name, "reason": f"Invoice exists ({existing}) for {eff_start}–{eff_end}"})
+                        any_added = False
+                        break
+
+                # per-property guard
+                if _property_already_billed(usr.name, prop_name, eff_start, eff_end, billing_type):
+                    continue
+
+                items = build_items(usr, prop_name, eff_start, eff_end)
+                if not items:
+                    continue
+
+                si = frappe.get_doc({
+                    "doctype": "Sales Invoice",
+                    "set_posting_time": 1,
+                    "utility_service_request": usr.name,
+                    "utility_property": prop_name,
+                    "custom_billing_type": billing_type,
+                    "customer": usr.customer,
+                    "customer_name": usr.customer_name,
+                    "company": usr.company,
+                    "posting_date": p_date,
+                    "due_date": d_date,
+                    "items": items,
+                })
+
+                any_added = True
+                invoice_from = min(invoice_from, eff_start) if invoice_from else eff_start
+                invoice_to = max(invoice_to, eff_end) if invoice_to else eff_end
+
+                si.from_date = invoice_from
+                si.to_date  = invoice_to
+
+                si.insert(ignore_permissions=True)
+                if submit:
+                    si.submit()
+
+                created_rows.append(si.name)
+
+            if not any_added:
+                skipped.append({"usr": name, "reason": f"No eligible properties {month_start}–{month_end}"})
                 continue
 
-            si.insert(ignore_permissions=True)
-            if cint(submit):
-                si.submit()
-
             frappe.db.commit()
-            success.append({"usr": name, "si": si.name})
+            success.append({"usr": name, "sis": created_rows[-1:], "period": f"{invoice_from}–{invoice_to}"})
 
         except Exception as e:
             frappe.db.rollback()
             failed.append({"usr": name, "error": cstr(e)})
 
     return {"success": success, "failed": failed, "skipped": skipped}
+
+
+# --------------------- item builders (injected) ---------------------
+
+def _build_rent_items(usr_doc, prop_name: str, eff_start: date, eff_end: date) -> list[dict]:
+    """Build child rows from USR items for Rent, fetching correct income account from Item master."""
+    items = []
+    company = usr_doc.company
+
+    for row in usr_doc.items or []:
+        item_code = row.get("item_code")
+
+        # get default accounts for this item in the given company
+        defaults = get_item_defaults(item_code, company)
+        income_account = defaults.get("income_account")
+
+        items.append({
+            "item_code": item_code,
+            "description": (row.get("item_name") or item_code or "")
+                           + (f" — Property: {prop_name}" if prop_name else ""),
+            "qty": row.get("quantity") or 1,
+            "rate": row.get("rate"),
+            "delivery_date": eff_end,
+            "utility_property": prop_name,
+            "uom": row.get("uom"),
+            "conversion_factor": row.get("conversion_factor"),
+            "cost_center": getattr(row, "cost_center", None) or getattr(usr_doc, "cost_center", None),
+            "income_account": row.get("income_account") or income_account,
+        })
+    return items
+
+def _build_other_items(_usr_doc, _prop_name: str, _eff_start: date, _eff_end: date) -> list[dict]:
+    """Build child rows from Utility Billing Settings for 'Others'."""
+    settings = frappe.get_doc("Utility Billing Settings", "Utility Billing Settings")
+    if not settings.additional_items:
+        return []
+    items = []
+    company = _usr_doc.company
+    for row in settings.additional_items:
+        # get default accounts for this item in the given company
+        defaults = get_item_defaults(row.get("item"), company)
+        income_account = defaults.get("income_account")
+        
+        items.append({
+            "item_code": row.get("item"),
+            "qty": 1,
+            "rate": row.get("amount"),
+            "uom": "Nos",
+            "utility_property": _prop_name,
+            "conversion_factor": 1,
+            "income_account": income_account,
+        })
+    return items
+
+
+# --------------------------- public APIs ---------------------------
+
+@frappe.whitelist()
+def bulk_generate_invoices_rent(year=None, month=None, posting_date=None, due_date=None, submit=0):
+    """Generate Rent invoices using the unified sub-function."""
+    return _generate_for_billing_type(
+        year=int(year), month=int(month),
+        posting_date=posting_date, due_date=due_date, submit=submit,
+        billing_type="Rent",
+        build_items=_build_rent_items,
+        per_usr_guard=True,      # keep USR-level guard for rent
+        billing_cycle=0,  # use each property's billing cycle (default 1 if empty)
+    )
+
+@frappe.whitelist()
+def bulk_generate_invoices_others(year=None, month=None, posting_date=None, due_date=None, submit=0):
+    """Generate 'Others' (additional items) invoices using the unified sub-function."""
+    # If you want to allow multiple per-USR in the same month (for add-ons), disable the USR guard:
+    return _generate_for_billing_type(
+        year=int(year), month=int(month),
+        posting_date=posting_date, due_date=due_date, submit=submit,
+        billing_type=(frappe.db.get_single_value("Utility Billing Settings", "additional_billing_type") or "Others"),
+        build_items=_build_other_items,
+        per_usr_guard=False,     # different behavior for add-ons
+        billing_cycle=1,  # always monthly for add-ons
+    )
+
+@frappe.whitelist()
+def bulk_generate_all_invoices(year=None, month=None, posting_date=None, due_date=None, submit=0):
+    """Convenience endpoint: runs Rent first, then Others, and merges results."""
+    rent = bulk_generate_invoices_rent(year, month, posting_date, due_date, submit)
+    others = bulk_generate_invoices_others(year, month, posting_date, due_date, submit)
+
+    def _merge(a: dict, b: dict) -> dict:
+        return {
+            "success": (a.get("success") or []) + (b.get("success") or []),
+            "failed":  (a.get("failed") or [])  + (b.get("failed") or []),
+            "skipped": (a.get("skipped") or []) + (b.get("skipped") or []),
+        }
+
+    return _merge(rent, others)

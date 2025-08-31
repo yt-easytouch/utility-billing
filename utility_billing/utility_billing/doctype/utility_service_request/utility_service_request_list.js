@@ -162,7 +162,7 @@ frappe.listview_settings["Utility Service Request"] = {
         primary_action(values) {
           d.hide();
           frappe.call({
-            method: "utility_billing.utility_billing.doctype.utility_service_request.utility_service_request.bulk_generate_invoices",
+            method: "utility_billing.utility_billing.doctype.utility_service_request.utility_service_request.bulk_generate_all_invoices",
             args: {
             //   filters,
               year: cint(values.year),
@@ -177,12 +177,15 @@ frappe.listview_settings["Utility Service Request"] = {
               if (!r.exc) {
                 let msg = "";
                 if (r.message.success?.length) {
-                  msg += `<p><b>Created:</b></p><ul>`;
-                  r.message.success.forEach(s => {
-                    msg += `<li>${s.usr} → <a href="#Form/Sales Invoice/${s.si}">${s.si}</a></li>`;
-                  });
-                  msg += "</ul>";
-                }
+					msg += `<p><b>Created:</b></p><ul>`;
+					r.message.success.forEach(s => {
+						s.sis.forEach(si => {
+						msg += `<li>${s.usr} → <a href="/app/sales-invoice//${si}">${si}</a></li>`;
+						});
+					});
+					msg += "</ul>";
+					}
+
                 if (r.message.failed?.length) {
                   msg += `<p><b style="color:red">Failed:</b></p><ul>`;
                   r.message.failed.forEach(f => {
