@@ -13,6 +13,7 @@
   "closedate",
   "column_break_elqa",
   "serial_no",
+  "utility_property",
   "item_code"
  ],
  "fields": [
@@ -71,11 +72,20 @@
    "in_standard_filter": 1,
    "label": "Utility Service Request",
    "options": "Utility Service Request"
+  },
+  {
+   "fetch_from": "serial_no.custom_utility_property",
+   "fieldname": "utility_property",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Utility Property",
+   "options": "Utility Property"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-05 21:38:16.753003",
+ "modified": "2025-09-01 22:27:15.846792",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Meter Assign",

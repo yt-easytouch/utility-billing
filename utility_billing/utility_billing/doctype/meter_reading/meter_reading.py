@@ -22,16 +22,17 @@ class MeterReading(Document):
             frappe.throw(frappe._("Cannot submit Meter Reading. No rates available."))
         existing_sales_order = frappe.db.exists(
             {
-                "doctype": "Sales Order Meter Reading",
-                "parenttype": "Sales Order",
-                "meter_reading": self.name,
+                "doctype": "Sales Invoice",
+                "custom_meter_reading": self.name,
             }
         )
         if not existing_sales_order:
             if settings.sales_order_creation_state == "Draft":
                 sales_order = create_sales_order(self)
+                sales_order.save()
             else:
                 sales_order = create_sales_order(self)
+                sales_order.save()
                 sales_order.submit()
 
     def validate_item_readings(self, item):
@@ -73,6 +74,10 @@ def create_sales_order(meter_reading):
         {
             "doctype": "Sales Invoice",
             "customer": meter_reading.customer,
+            "utility_property": meter_reading.utility_property,
+            "custom_meter_reading": meter_reading.name,
+            "custom_billing_type": 'Utility',
+            "set_posting_time": 1,
             "meter_readings": [],
             "items": [],
             # "order_type": "Sales",
@@ -115,7 +120,6 @@ def create_sales_order(meter_reading):
 
     sales_order.insert()
     AccountsController.append_taxes_from_item_tax_template(sales_order)
-    sales_order.save()
 
     return sales_order
 
@@ -294,6 +298,7 @@ def inset_data(doc):
         new_doc = frappe.get_doc({
             "doctype": "Meter Reading",
             "customer": meter_assign.customer,
+            "utility_property": meter_assign.utility_property,
             "date":  frappe.utils.nowdate(),
             "price_list":  price_list,
             # "utility_property": meter_assign.utility_service_request,
@@ -307,3 +312,29 @@ def inset_data(doc):
         new_doc.insert()
         frappe.db.commit()
         return {"message": "New draft created", "docname": new_doc.name}
+
+@frappe.whitelist()
+def submit_create_invoice(docname, year, month, posting_date, due_date , submit=False):
+    """Bulk submit Meter Readings and create Sales Invoices."""
+    meter_reading = frappe.get_doc("Meter Reading", docname)
+    if meter_reading.docstatus != 0:
+        frappe.throw(frappe._("Meter Reading {0} is not in Draft state.").format(docname))
+
+    from datetime import datetime
+    from datetime import timedelta
+    from_date = datetime(int(year), int(month), 1)
+    end_date = datetime(int(year), int(month) + 1, 1) if month != '12' else datetime(int(year) + 1, 1, 1)
+    to_date = end_date - timedelta(days=1)
+    
+    sales_order = create_sales_order(meter_reading)
+    sales_order.posting_date = posting_date if posting_date else nowdate()
+    sales_order.due_date = due_date if due_date else sales_order.posting_date
+    sales_order.from_date = from_date
+    sales_order.to_date = to_date
+    sales_order.save()
+    if submit:
+        sales_order.submit()
+
+    meter_reading.db_set("docstatus", 1)
+    
+    return {"invoice": sales_order.name }
