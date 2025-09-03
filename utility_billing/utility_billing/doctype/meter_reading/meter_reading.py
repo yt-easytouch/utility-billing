@@ -332,8 +332,8 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
     sales_order.from_date = from_date
     sales_order.to_date = to_date
     sales_order.save()
-    if submit:
-        sales_order.submit()
+    # if submit:
+    #     sales_order.submit()
 
     meter_reading.db_set("docstatus", 1)
     
