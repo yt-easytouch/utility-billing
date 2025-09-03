@@ -74,7 +74,7 @@ def create_sales_order(meter_reading):
         {
             "doctype": "Sales Invoice",
             "customer": meter_reading.customer,
-            "utility_property": meter_reading.utility_property,
+            "utility_property": meter_reading.property,
             "custom_meter_reading": meter_reading.name,
             "custom_billing_type": 'Utility',
             "set_posting_time": 1,
