@@ -58,7 +58,7 @@ class MeterReading(Document):
                 )
             )
 
-def create_sales_order(meter_reading):
+def create_sales_order(meter_reading,from_date,to_date):
     """Create a Sales Order based on the Meter Reading."""
     # sales_order = frappe.get_doc(
     #     {
@@ -69,21 +69,41 @@ def create_sales_order(meter_reading):
     #         "order_type": "Sales",
     #         "selling_price_list": meter_reading.price_list,
     #     }
-    # )  
-    sales_order = frappe.get_doc(
-        {
-            "doctype": "Sales Invoice",
-            "customer": meter_reading.customer,
-            "utility_property": meter_reading.property,
-            "custom_meter_reading": meter_reading.name,
-            "custom_billing_type": 'Utility',
-            "set_posting_time": 1,
-            "meter_readings": [],
-            "items": [],
-            # "order_type": "Sales",
-            "selling_price_list": meter_reading.price_list,
-        }
-    )
+    # ) 
+    existing_si = frappe.get_all(
+                    "Sales Invoice",
+                    filters={
+                        "docstatus": 0,  # draft only
+                        # "utility_service_request": usr.name,
+                        # "utility_property": prop_name,
+                        # "custom_billing_type": billing_type,
+                        # Optional: check overlapping date ranges
+                        "from_date": ("<=", from_date),
+                        "to_date": (">=", to_date),
+                    },
+                    fields=["name"],
+                    order_by="creation desc",
+                    limit=1
+                )
+
+    if existing_si:
+        sales_order = frappe.get_doc("Sales Invoice", existing_si[0].name)
+
+    else:
+        sales_order = frappe.get_doc(
+            {
+                "doctype": "Sales Invoice",
+                "customer": meter_reading.customer,
+                "utility_property": meter_reading.property,
+                "custom_meter_reading": meter_reading.name,
+                "custom_billing_type": 'Utility',
+                "set_posting_time": 1,
+                "meter_readings": [],
+                "items": [],
+                # "order_type": "Sales",
+                "selling_price_list": meter_reading.price_list,
+            }
+        )
     
     accounting_dimensions = frappe.get_all("Accounting Dimension", pluck="document_type")
     for dim in accounting_dimensions:
@@ -330,7 +350,7 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
     end_date = datetime(int(year), int(month) + 1, 1) if month != '12' else datetime(int(year) + 1, 1, 1)
     to_date = end_date - timedelta(days=1)
     
-    sales_order = create_sales_order(meter_reading)
+    sales_order = create_sales_order(meter_reading,from_date,to_date)
     sales_order.posting_date = posting_date if posting_date else nowdate()
     sales_order.due_date = due_date if due_date else sales_order.posting_date
     sales_order.from_date = from_date

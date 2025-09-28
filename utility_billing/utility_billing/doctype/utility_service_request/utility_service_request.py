@@ -1110,7 +1110,6 @@ def _generate_for_billing_type(
                 # skip if no valid period
                 if eff_start > eff_end:
                     continue
-
                 
                 
                 # print(f"USR {name}, Property {prop_name}: contract {contract_start}–{contract_end} ")
@@ -1133,31 +1132,64 @@ def _generate_for_billing_type(
                 items = build_items(usr, prop_name, eff_start, eff_end)
                 if not items:
                     continue
+                # try to reuse draft invoice for this property and billing_type
+                existing_si = frappe.get_all(
+                    "Sales Invoice",
+                    filters={
+                        "docstatus": 0,  # draft only
+                        # "utility_service_request": usr.name,
+                        "utility_property": prop_name,
+                        # "custom_billing_type": billing_type,
+                        # Optional: check overlapping date ranges
+                        "from_date": ("<=", eff_end),
+                        "to_date": (">=", eff_start),
+                    },
+                    fields=["name"],
+                    order_by="creation desc",
+                    limit=1
+                )
 
-                si = frappe.get_doc({
-                    "doctype": "Sales Invoice",
-                    "set_posting_time": 1,
-                    "utility_service_request": usr.name,
-                    "utility_property": prop_name,
-                    "custom_billing_type": billing_type,
-                    "customer": usr.customer,
-                    "customer_name": usr.customer_name,
-                    "company": usr.company,
-                    "posting_date": p_date,
-                    "due_date": d_date,
-                    "items": items,
-                })
+                if existing_si:
+                    si = frappe.get_doc("Sales Invoice", existing_si[0].name)
+                    # merge/update items
+                    for row in items:
+                        si.append("items", row)
 
-                any_added = True
-                invoice_from = min(invoice_from, eff_start) if invoice_from else eff_start
-                invoice_to = max(invoice_to, eff_end) if invoice_to else eff_end
+                    # extend date coverage if needed
+                    si.from_date = min(si.from_date or eff_start, eff_start)
+                    si.to_date   = max(si.to_date or eff_end, eff_end)
+                    any_added = True
+                    si.save(ignore_permissions=True)
 
-                si.from_date = invoice_from
-                si.to_date  = invoice_to
+                else:
+                    # create new invoice if no draft exists
+                    si = frappe.get_doc({
+                        "doctype": "Sales Invoice",
+                        "set_posting_time": 1,
+                        "utility_service_request": usr.name,
+                        "utility_property": prop_name,
+                        "custom_billing_type": billing_type,
+                        "customer": usr.customer,
+                        "customer_name": usr.customer_name,
+                        "company": usr.company,
+                        "posting_date": p_date,
+                        "due_date": d_date,
+                        "items": items,
+                        "from_date": eff_start,
+                        "to_date": eff_end,
+                    })
+                    any_added = True
+                    invoice_from = min(invoice_from, eff_start) if invoice_from else eff_start
+                    invoice_to = max(invoice_to, eff_end) if invoice_to else eff_end
 
-                si.insert(ignore_permissions=True)
+                    si.from_date = invoice_from
+                    si.to_date  = invoice_to
+                    si.insert(ignore_permissions=True)
+
                 if submit:
                     si.submit()
+                    
+
 
                 created_rows.append(si.name)
 
