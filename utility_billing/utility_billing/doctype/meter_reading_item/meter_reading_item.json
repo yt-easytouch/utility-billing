@@ -109,6 +109,13 @@
    "read_only": 1,
    "reqd": 1
   },
+{
+   "fieldname": "image",
+   "fieldtype": "Attach",
+   "hidden": 1,
+   "label": "Image"
+  },
+
   {
    "fieldname": "column_break_smgb",
    "fieldtype": "Column Break"

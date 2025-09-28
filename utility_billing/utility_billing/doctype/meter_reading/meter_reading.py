@@ -287,6 +287,7 @@ def inset_data(doc):
                 'item_code': meter_assign.item_code,
                 'meter_number': meter_assign.serial_no,
                 'current_reading': doc.get('reading_value'),
+                'image': doc.get('photo'),
             })
 
         meter_reading.save()
