@@ -248,6 +248,7 @@ def get_serial_numbers_from_warranty_claims(customer):
 def inset_data(doc):
     import json
     doc = json.loads(doc)
+    # return doc
 
     # Validate meter_assign
     meter_assign = frappe.get_doc("Meter Assign", doc.get('meter_assign'))
@@ -281,6 +282,7 @@ def inset_data(doc):
         if existing_item:
             # Update existing item reading
             existing_item.current_reading = doc.get('reading_value')
+            existing_item.image = doc.get('photo')
         else:
             # Append new item
             meter_reading.append('items', {
@@ -308,6 +310,7 @@ def inset_data(doc):
                 'item_code': meter_assign.item_code,
                 'meter_number': meter_assign.serial_no,
                 'current_reading': doc.get('reading_value'),
+                'image': doc.get('photo'),
             }]
         })
         new_doc.insert()
