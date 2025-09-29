@@ -75,7 +75,7 @@ def create_sales_order(meter_reading,from_date,to_date):
                     filters={
                         "docstatus": 0,  # draft only
                         # "utility_service_request": usr.name,
-                        # "utility_property": prop_name,
+                        "utility_property": meter_reading.property,
                         # "custom_billing_type": billing_type,
                         # Optional: check overlapping date ranges
                         "from_date": ("<=", from_date),
@@ -349,7 +349,6 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
     from_date = datetime(int(year), int(month), 1)
     end_date = datetime(int(year), int(month) + 1, 1) if month != '12' else datetime(int(year) + 1, 1, 1)
     to_date = end_date - timedelta(days=1)
-    
     sales_order = create_sales_order(meter_reading,from_date,to_date)
     sales_order.posting_date = posting_date if posting_date else nowdate()
     sales_order.due_date = due_date if due_date else sales_order.posting_date
