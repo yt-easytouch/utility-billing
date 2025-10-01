@@ -44,7 +44,7 @@ class MeterReading(Document):
 
         previous_reading = get_previous_invoice_reading(
             item_code=item.item_code,
-            customer=self.customer,
+            property_number=self.property,
             meter_number=item.meter_number,
         )
         item.previous_reading = previous_reading
@@ -122,7 +122,7 @@ def create_sales_order(meter_reading,from_date,to_date):
 
     for i in meter_reading.items:
         prev_reading = get_previous_invoice_reading(
-            i.item_code, meter_reading.customer, i.meter_number
+            item_code =i.item_code, property_number=meter_reading.property, meter_number = i.meter_number
         )
         sales_order.append(
             "meter_readings",
@@ -174,18 +174,19 @@ def get_open_reading(item_code, customer, meter_number=None):
 
 
 @frappe.whitelist()
-def get_previous_invoice_reading(item_code, customer, meter_number=None , date =None):
+def get_previous_invoice_reading(item_code, property_number = None, meter_number=None , date =None):
     """Fetch the latest reading for the specified customer, item, and optional meter number."""
 
-    SalesInvoiceMeterReading = DocType("Sales Invoice Meter Reading")
-    SalesInvoice = DocType("Sales Invoice")
+    SalesInvoiceMeterReading = DocType("Meter Reading Item")
+    SalesInvoice = DocType("Meter Reading")
 
     query = (
         frappe.qb.from_(SalesInvoiceMeterReading)
         .join(SalesInvoice)
         .on(SalesInvoice.name == SalesInvoiceMeterReading.parent)
         .select(SalesInvoiceMeterReading.current_reading)
-        .where(SalesInvoice.customer == customer)
+        # .where(SalesInvoice.customer == customer)
+        .where(SalesInvoice.utility_property == property_number)
         .where(SalesInvoiceMeterReading.item_code == item_code)
         .where(SalesInvoice.docstatus == 1)
     )
@@ -198,6 +199,9 @@ def get_previous_invoice_reading(item_code, customer, meter_number=None , date =
     query = query.orderby(SalesInvoiceMeterReading.creation, order=Order.desc)
     result = query.limit(1).run()
     
+    print(str(query))
+    print(str(result))
+
     if result:
         return result[0][0]
     else:
@@ -321,6 +325,7 @@ def inset_data(doc):
         new_doc = frappe.get_doc({
             "doctype": "Meter Reading",
             "customer": meter_assign.customer,
+            "property": meter_assign.utility_property,
             "utility_property": meter_assign.utility_property,
             "date":  frappe.utils.nowdate(),
             "price_list":  price_list,
