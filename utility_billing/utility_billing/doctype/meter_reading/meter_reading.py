@@ -186,7 +186,7 @@ def get_previous_invoice_reading(item_code, property_number = None, meter_number
         .on(SalesInvoice.name == SalesInvoiceMeterReading.parent)
         .select(SalesInvoiceMeterReading.current_reading)
         # .where(SalesInvoice.customer == customer)
-        .where(SalesInvoice.utility_property == property_number)
+        .where(SalesInvoice.property == property_number)
         .where(SalesInvoiceMeterReading.item_code == item_code)
         .where(SalesInvoice.docstatus == 1)
     )
@@ -326,7 +326,7 @@ def inset_data(doc):
             "doctype": "Meter Reading",
             "customer": meter_assign.customer,
             "property": meter_assign.utility_property,
-            "utility_property": meter_assign.utility_property,
+            # "utility_property": meter_assign.utility_property,
             "date":  frappe.utils.nowdate(),
             "price_list":  price_list,
             # "utility_property": meter_assign.utility_service_request,
