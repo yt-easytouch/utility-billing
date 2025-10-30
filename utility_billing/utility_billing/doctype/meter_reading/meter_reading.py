@@ -84,7 +84,7 @@ class MeterReading(Document):
                 frappe._(f"Current reading is required for item: {item.item_code}")
             )
 
-        previous_reading, previous_image  , previous_meter_reading = get_previous_invoice_reading(
+        previous_reading, previous_image , previous_meter_reading = get_previous_invoice_reading(
             item_code=item.item_code,
             property_number=self.property,
             meter_number=item.meter_number,
@@ -256,14 +256,15 @@ def get_previous_invoice_reading(item_code, property_number = None, meter_number
     else:
         meter_assign = find_meter_assign(item_code,meter_number)
         if not meter_assign:
-            return 0
+            return 0 , None , None
         filters = {
         "parent": meter_assign.utility_service_request,
         "meter_number": meter_number,
         "item_code": item_code
         }
         open_reading = frappe.get_value("OpenMeter Reading", filters, "open_reading")
-        return open_reading if open_reading else 0 , None , None
+        value_open_reading = open_reading if open_reading else 0
+        return value_open_reading , None , None
 
 
 @frappe.whitelist()
