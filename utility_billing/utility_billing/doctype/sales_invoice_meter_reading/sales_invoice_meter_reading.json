@@ -17,7 +17,13 @@
   "column_break_smgb",
   "uom",
   "stock_uom",
-  "qty"
+  "qty",
+  "section_break_xlew",
+  "previous_image",
+  "previous_image_view",
+  "column_break_lhyy",
+  "current_image",
+  "current_image_view"
  ],
  "fields": [
   {
@@ -105,17 +111,50 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Consumption"
+  },
+  {
+   "fieldname": "previous_image_view",
+   "fieldtype": "Image",
+   "label": "Previous Image View",
+   "options": "previous_image"
+  },
+  {
+   "fieldname": "current_image_view",
+   "fieldtype": "Image",
+   "label": "Current Image View",
+   "options": "current_image"
+  },
+  {
+   "fieldname": "section_break_xlew",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_lhyy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "previous_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "previous_image"
+  },
+  {
+   "fieldname": "current_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Current_image"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-11-08 07:35:30.185347",
+ "modified": "2025-10-30 15:03:15.537183",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Sales Invoice Meter Reading",
  "owner": "Administrator",
  "permissions": [],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

@@ -15,6 +15,48 @@ class MeterReading(Document):
         for item in self.items:
             self.validate_item_readings(item)
         create_meter_reading_rates(self, self.price_list, self.date)
+    def on_update(self):
+        """Whenever Meter Reading is updated, update matching Sales Invoice Meter Reading child rows."""
+        # find all Sales Invoices that have meter_readings referencing this meter_reading.name
+        linked_invoices = frappe.db.sql(
+            """
+            SELECT DISTINCT parent 
+            FROM `tabSales Invoice Meter Reading`
+            WHERE meter_reading = %s
+            """,
+            self.name,
+            as_dict=True
+        )
+
+        if not linked_invoices:
+            return
+
+        for inv in linked_invoices:
+            sales_invoice = frappe.get_doc("Sales Invoice", inv.parent)
+            updated = False
+
+            for item in self.items:
+                # find child in Sales Invoice Meter Reading that matches by item_code + meter_number + meter_reading name
+                matched = next(
+                    (
+                        m for m in sales_invoice.meter_readings
+                        if m.item_code == item.item_code
+                        and m.meter_number == item.meter_number
+                        and m.meter_reading == self.name
+                    ),
+                    None
+                )
+
+                if matched:
+                    # only update if images changed
+                    if matched.current_image != item.image or matched.previous_image != item.previous_image:
+                        matched.current_image = item.image
+                        matched.previous_image = item.previous_image
+                        updated = True
+
+            if updated:
+                sales_invoice.save(ignore_permissions=True)
+                frappe.db.commit()
 
     def on_submit(self):
         settings = frappe.get_single("Utility Billing Settings")
@@ -42,19 +84,21 @@ class MeterReading(Document):
                 frappe._(f"Current reading is required for item: {item.item_code}")
             )
 
-        previous_reading = get_previous_invoice_reading(
+        previous_reading, previous_image  , previous_meter_reading = get_previous_invoice_reading(
             item_code=item.item_code,
             property_number=self.property,
             meter_number=item.meter_number,
         )
         item.previous_reading = previous_reading
+        item.previous_image = previous_image
+        item.previous_meter_reading = previous_meter_reading
 
         item.consumption = item.current_reading - previous_reading
 
         if item.consumption < 0:
             frappe.throw(
                 frappe._(
-                    f"Current reading cannot be lower than the previous reading for item: {item.item_code}"
+                    f"Current reading cannot be lower than the previous reading for item: {item.item_code} Previous Rading: {previous_reading}"
                 )
             )
 
@@ -90,13 +134,16 @@ def create_sales_order(meter_reading,from_date,to_date):
         sales_order = frappe.get_doc("Sales Invoice", existing_si[0].name)
 
     else:
+        
+        customer = find_contract_utility_property(meter_reading.property)
+    
         sales_order = frappe.get_doc(
             {
                 "doctype": "Sales Invoice",
-                "customer": meter_reading.customer,
+                "customer": customer,
                 "utility_property": meter_reading.property,
                 "custom_meter_reading": meter_reading.name,
-                "custom_billing_type": 'Utility',
+                # "custom_billing_type": '',
                 "set_posting_time": 1,
                 "meter_readings": [],
                 "items": [],
@@ -135,6 +182,8 @@ def create_sales_order(meter_reading,from_date,to_date):
                 "current_reading": i.current_reading,
                 "previous_reading": prev_reading,
                 "consumption": i.consumption,
+                "current_image": i.image,
+                "previous_image": i.previous_image,
             },
         )
 
@@ -184,7 +233,7 @@ def get_previous_invoice_reading(item_code, property_number = None, meter_number
         frappe.qb.from_(SalesInvoiceMeterReading)
         .join(SalesInvoice)
         .on(SalesInvoice.name == SalesInvoiceMeterReading.parent)
-        .select(SalesInvoiceMeterReading.current_reading)
+        .select(SalesInvoiceMeterReading.current_reading , SalesInvoiceMeterReading.image , SalesInvoice.name)
         # .where(SalesInvoice.customer == customer)
         .where(SalesInvoice.property == property_number)
         .where(SalesInvoiceMeterReading.item_code == item_code)
@@ -199,11 +248,11 @@ def get_previous_invoice_reading(item_code, property_number = None, meter_number
     query = query.orderby(SalesInvoiceMeterReading.creation, order=Order.desc)
     result = query.limit(1).run()
     
-    print(str(query))
-    print(str(result))
+    # print(str(query))
+    # print(str(result))
 
     if result:
-        return result[0][0]
+        return result[0][0] , result[0][1] , result[0][2]
     else:
         meter_assign = find_meter_assign(item_code,meter_number)
         if not meter_assign:
@@ -214,7 +263,37 @@ def get_previous_invoice_reading(item_code, property_number = None, meter_number
         "item_code": item_code
         }
         open_reading = frappe.get_value("OpenMeter Reading", filters, "open_reading")
-        return open_reading if open_reading else 0
+        return open_reading if open_reading else 0 , None , None
+
+
+@frappe.whitelist()
+def find_contract_utility_property(property_number = None):
+    """Fetch the latest reading for the specified customer, item, and optional meter number."""
+
+    SalesInvoiceMeterReading = DocType("Contract Utility Property Item")
+    SalesInvoice = DocType("Utility Service Request")
+
+    query = (
+        frappe.qb.from_(SalesInvoiceMeterReading)
+        .join(SalesInvoice)
+        .on(SalesInvoice.name == SalesInvoiceMeterReading.parent)
+        .select(SalesInvoice.party_name)
+        # .where(SalesInvoice.customer == customer)
+        .where(SalesInvoiceMeterReading.utility_property == property_number)
+        .where(SalesInvoiceMeterReading.is_active == 1)
+        .where(SalesInvoice.docstatus == 1)
+    )
+
+
+    query = query.orderby(SalesInvoiceMeterReading.creation, order=Order.desc)
+    result = query.limit(1).run()
+    
+
+    if result:
+        return result[0][0]
+    else:
+        return  0
+
 
 def find_meter_assign(item_code=None, meter_number=None):
     filters = {
@@ -275,23 +354,19 @@ def inset_data(doc):
     # return doc
 
     # Validate meter_assign
-    meter_assign = frappe.get_doc("Meter Assign", doc.get('meter_assign'))
-    if not meter_assign:
+    serial_no = frappe.get_doc("Serial No", doc.get('serial_no'))
+    if not serial_no:
         frappe.throw("Meter Assign not found")
 
     # Find existing draft Meter Reading for this customer and utility property
     existing_doc_name = frappe.db.get_value('Meter Reading',
                                            filters={
-                                               'customer': meter_assign.customer,
-                                            #    'utility_property': meter_assign.utility_service_request,
+                                                'property': serial_no.custom_utility_property,
                                                'docstatus': '0'
                                            },
                                            fieldname='name') 
-    price_list = frappe.db.get_value('Utility Service Request',
-                                           filters={
-                                               'name': meter_assign.utility_service_request,
-                                           },
-                                           fieldname='price_list')
+    settings = frappe.get_single("Utility Billing Settings")
+    price_list = settings.default_price_list
 
     if existing_doc_name:
         meter_reading = frappe.get_doc('Meter Reading', existing_doc_name)
@@ -299,7 +374,7 @@ def inset_data(doc):
         # Check if item with item_code and meter_number exists in child table
         existing_item = None
         for item in meter_reading.items:
-            if item.item_code == meter_assign.item_code and item.meter_number ==  meter_assign.serial_no:
+            if item.item_code == doc.get('item_code') and item.meter_number ==  doc.get('serial_no'):
                 existing_item = item
                 break
         
@@ -310,8 +385,8 @@ def inset_data(doc):
         else:
             # Append new item
             meter_reading.append('items', {
-                'item_code': meter_assign.item_code,
-                'meter_number': meter_assign.serial_no,
+                'item_code': doc.get('item_code'),
+                'meter_number': doc.get('serial_no'),
                 'current_reading': doc.get('reading_value'),
                 'image': doc.get('photo'),
             })
@@ -324,16 +399,14 @@ def inset_data(doc):
         # Create new Meter Reading draft with the first item
         new_doc = frappe.get_doc({
             "doctype": "Meter Reading",
-            "customer": meter_assign.customer,
-            "property": meter_assign.utility_property,
-            # "utility_property": meter_assign.utility_property,
+            "property": serial_no.custom_utility_property,
             "date":  frappe.utils.nowdate(),
             "price_list":  price_list,
             # "utility_property": meter_assign.utility_service_request,
             # "docstatus": "Draft",
             "items": [{
-                'item_code': meter_assign.item_code,
-                'meter_number': meter_assign.serial_no,
+                'item_code': doc.get('item_code'),
+                'meter_number': doc.get('serial_no'),
                 'current_reading': doc.get('reading_value'),
                 'image': doc.get('photo'),
             }]
@@ -341,6 +414,114 @@ def inset_data(doc):
         new_doc.insert()
         frappe.db.commit()
         return {"message": "New draft created", "docname": new_doc.name}
+
+import frappe, json, os, random, string
+from frappe.utils import nowdate, now_datetime
+
+def generate_image_code(length=6):
+    """Generate random alphanumeric code like ABC123."""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=length))
+
+@frappe.whitelist()
+def bulk_insert(serial_no, readings):
+    """
+    Handle readings coming from UI (where files are already uploaded).
+    Rename uploaded images with unique code + serial + date,
+    and make them public.
+    """
+    readings = frappe.parse_json(readings)
+    serial = frappe.get_doc("Serial No", serial_no)
+    if not serial:
+        frappe.throw("Serial No not found")
+
+    settings = frappe.get_single("Utility Billing Settings")
+    price_list = settings.default_price_list
+
+    existing_doc_name = frappe.db.get_value(
+        "Meter Reading",
+        {"property": serial.custom_utility_property, "docstatus": 0},
+        "name"
+    )
+
+    if existing_doc_name:
+        meter_doc = frappe.get_doc("Meter Reading", existing_doc_name)
+        message = "Existing draft updated"
+    else:
+        meter_doc = frappe.get_doc({
+            "doctype": "Meter Reading",
+            "property": serial.custom_utility_property,
+            "date": nowdate(),
+            "price_list": price_list,
+            "items": []
+        })
+        message = "New draft created"
+
+    today_str = now_datetime().strftime("%Y%m%d")
+
+    for row in readings:
+        item_code = row.get("item_code")
+        current_reading = row.get("reading_value")
+        photo = row.get("photo")
+
+        if not item_code or not current_reading:
+            continue
+
+        photo_url = None
+
+        # ✅ File was uploaded via UI — handle rename
+        if photo and photo.startswith("/files/"):
+            file_name = frappe.db.get_value("File", {"file_url": photo}, "name")
+            if file_name:
+                try:
+                    file_doc = frappe.get_doc("File", file_name)
+                    old_name = file_doc.file_name
+                    old_ext = os.path.splitext(old_name)[1] or ".jpg"
+
+                    # Generate unique image code and new filename
+                    image_code = generate_image_code()
+                    new_filename = f"IMG-{image_code}-{serial_no}-{today_str}{old_ext}"
+                    new_rel_path = f"/files/{new_filename}"
+
+                    old_path = frappe.get_site_path("public", file_doc.file_url.strip("/"))
+                    new_path = frappe.get_site_path("public", new_rel_path.strip("/"))
+
+                    if os.path.exists(old_path):
+                        os.rename(old_path, new_path)
+
+                    file_doc.file_name = new_filename
+                    file_doc.file_url = new_rel_path
+                    file_doc.is_private = 0
+                    file_doc.save(ignore_permissions=True)
+
+                    photo_url = new_rel_path
+
+                except Exception as e:
+                    frappe.log_error(f"File rename failed for {photo}: {e}")
+                    photo_url = photo
+
+        # 🔁 Update or append reading item
+        existing = next(
+            (i for i in meter_doc.items if i.item_code == item_code and i.meter_number == serial_no),
+            None
+        )
+
+        if existing:
+            existing.current_reading = current_reading
+            existing.image = photo_url or photo
+        else:
+            meter_doc.append("items", {
+                "item_code": item_code,
+                "meter_number": serial_no,
+                "current_reading": current_reading,
+                "image": photo_url or photo
+            })
+
+    meter_doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"message": message, "docname": meter_doc.name}
+
 
 @frappe.whitelist()
 def submit_create_invoice(docname, year, month, posting_date, due_date , submit=False):
@@ -359,7 +540,20 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
     sales_order.due_date = due_date if due_date else sales_order.posting_date
     sales_order.from_date = from_date
     sales_order.to_date = to_date
-    sales_order.save()
+    if not sales_order.payment_schedule:
+    # if missing, create one row that matches invoice due_date
+        sales_order.append("payment_schedule", {
+        "due_date": sales_order.due_date or sales_order.posting_date,
+        "invoice_portion": 100,
+        "payment_amount": sales_order.grand_total
+        })
+    else:
+    # if exists, correct the due_date
+        for ps in sales_order.payment_schedule:
+            ps.due_date = sales_order.due_date or sales_order.posting_date
+            ps.payment_amount = sales_order.grand_total
+            ps.invoice_portion = 100
+    sales_order.save(ignore_permissions=True)
     # if submit:
     #     sales_order.submit()
 

@@ -8,14 +8,12 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "customer",
+  "property",
   "column_break_qmhh",
   "date",
-  "customer_name",
   "column_break_aiuo",
   "company",
   "territory",
-  "property",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -47,13 +45,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "customer",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Customer",
-   "options": "Customer"
-  },
-  {
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
@@ -70,12 +61,6 @@
    "in_list_view": 1,
    "label": "Date",
    "reqd": 1
-  },
-  {
-   "fieldname": "customer_name",
-   "fieldtype": "Data",
-   "label": "Customer Name",
-   "read_only": 1
   },
   {
    "fieldname": "territory",
@@ -178,8 +163,9 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-01 20:04:32.727260",
- "modified_by": "Administrator",
+ "make_attachments_public": 1,
+ "modified": "2025-10-30 13:38:52.814509",
+ "modified_by": "engacs@yooltech.com",
  "module": "Utility Billing",
  "name": "Meter Reading",
  "naming_rule": "By \"Naming Series\" field",

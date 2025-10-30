@@ -10,9 +10,7 @@
   "section_break_cpzx",
   "naming_series",
   "request_type",
-  "service_request_from",
   "party_name",
-  "customer_name",
   "column_break_nqzi",
   "date",
   "customer_group",
@@ -146,9 +144,7 @@
    "fieldname": "request_type",
    "fieldtype": "Link",
    "in_filter": 1,
-   "in_list_view": 1,
    "in_preview": 1,
-   "in_standard_filter": 1,
    "label": "Utility Request Type",
    "options": "Issue Type",
    "reqd": 1
@@ -338,20 +334,10 @@
   },
   {
    "allow_on_submit": 1,
-   "default": "Customer",
-   "fieldname": "service_request_from",
-   "fieldtype": "Link",
-   "label": "Service Request From",
-   "link_filters": "[[\"DocType\",\"name\",\"in\", [\"Customer\", \"Lead\", \"Prospect\", \"CRM Deal\"]]]",
-   "options": "DocType",
-   "reqd": 1
-  },
-  {
-   "allow_on_submit": 1,
    "fieldname": "party_name",
-   "fieldtype": "Dynamic Link",
+   "fieldtype": "Link",
    "label": "Party Name",
-   "options": "service_request_from",
+   "options": "Customer",
    "reqd": 1
   },
   {
@@ -476,14 +462,6 @@
    "read_only": 1
   },
   {
-   "allow_on_submit": 1,
-   "fetch_from": "customer.customer_name",
-   "fieldname": "customer_name",
-   "fieldtype": "Data",
-   "label": "Customer Name",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_yzlm",
    "fieldtype": "Column Break"
   },
@@ -550,8 +528,8 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-31 15:25:39.916545",
- "modified_by": "Administrator",
+ "modified": "2025-10-30 14:32:42.869526",
+ "modified_by": "engacs@yooltech.com",
  "module": "Utility Billing",
  "name": "Utility Service Request",
  "naming_rule": "By \"Naming Series\" field",
@@ -615,6 +593,7 @@
    "role": "Property User"
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "party_name,customer_group,territory,request_type,nrcpassport_no",
  "show_title_field_in_link": 1,
  "sort_field": "creation",
