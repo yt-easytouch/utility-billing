@@ -57,7 +57,12 @@ class MeterReading(Document):
             if updated:
                 sales_invoice.save(ignore_permissions=True)
                 frappe.db.commit()
-
+                
+                
+    def on_update_after_submit(self):
+        self.on_update()
+    #     for item in self.items:
+    #         self.validate_item_readings(item)
     # def on_submit(self):
     #     # settings = frappe.get_single("Utility Billing Settings")
     #     # if not self.rates or len(self.rates) == 0:

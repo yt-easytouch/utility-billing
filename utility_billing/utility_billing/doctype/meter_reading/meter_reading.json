@@ -14,6 +14,7 @@
   "column_break_aiuo",
   "company",
   "territory",
+  "version",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -157,6 +158,12 @@
   {
    "fieldname": "dimension_col_break",
    "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "label": "Version"
   }
  ],
  "grid_page_length": 50,
@@ -164,8 +171,8 @@
  "is_submittable": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2025-10-30 13:38:52.814509",
- "modified_by": "engacs@yooltech.com",
+ "modified": "2025-10-31 17:01:48.669933",
+ "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Meter Reading",
  "naming_rule": "By \"Naming Series\" field",
