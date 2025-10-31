@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"RdhNZhI39s\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Utility Billing &amp; Property Management</span>\",\"col\":12}},{\"id\":\"96Uspmh80R\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sYe8H-efqi\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"yjYKVDPGXJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Utility Billing Settings\",\"col\":3}},{\"id\":\"eqpOxmo372\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Utility Service Request\",\"col\":3}},{\"id\":\"FnxJmE8cHW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Meter Reading\",\"col\":3}},{\"id\":\"_kaF7CGr06\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Utility Property\",\"col\":3}},{\"id\":\"AfmnnngAoW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"V-YDI6I1EU\",\"type\":\"card\",\"data\":{\"card_name\":\"Service Operations\",\"col\":4}},{\"id\":\"7gy7uB2rhz\",\"type\":\"card\",\"data\":{\"card_name\":\"Property Management\",\"col\":4}},{\"id\":\"MTQmyxb7W8\",\"type\":\"card\",\"data\":{\"card_name\":\"Billing & Transactions\",\"col\":4}},{\"id\":\"r7y6y33VM7\",\"type\":\"card\",\"data\":{\"card_name\":\"Rules and Structure\",\"col\":4}},{\"id\":\"_QwacqP-jP\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}},{\"id\":\"uem37c79xh\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
+ "content": "[{\"id\":\"96Uspmh80R\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sYe8H-efqi\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"SiVGvs8PCq\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":3}},{\"id\":\"5Zj55lE4LF\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Due Invoice Rent\",\"col\":3}},{\"id\":\"FnxJmE8cHW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Meter Reading\",\"col\":3}},{\"id\":\"eqpOxmo372\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Utility Service Request\",\"col\":3}},{\"id\":\"ozvmexIZWV\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Report Meter Reading\",\"col\":3}},{\"id\":\"_kaF7CGr06\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Utility Property\",\"col\":3}},{\"id\":\"AfmnnngAoW\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"V-YDI6I1EU\",\"type\":\"card\",\"data\":{\"card_name\":\"Service Operations\",\"col\":4}},{\"id\":\"7gy7uB2rhz\",\"type\":\"card\",\"data\":{\"card_name\":\"Property Management\",\"col\":4}},{\"id\":\"MTQmyxb7W8\",\"type\":\"card\",\"data\":{\"card_name\":\"Billing & Transactions\",\"col\":4}},{\"id\":\"r7y6y33VM7\",\"type\":\"card\",\"data\":{\"card_name\":\"Rules and Structure\",\"col\":4}},{\"id\":\"_QwacqP-jP\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}},{\"id\":\"uem37c79xh\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
  "creation": "2025-05-02 19:43:46.526258",
  "custom_blocks": [],
  "docstatus": 0,
@@ -318,7 +318,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-05-20 20:01:45.637753",
+ "modified": "2025-10-31 14:55:31.446322",
  "modified_by": "Administrator",
  "module": "Utility Billing",
  "name": "Utility and Rental",
@@ -332,13 +332,29 @@
    "role": "All"
   }
  ],
- "sequence_id": 29.0,
+ "sequence_id": 1.0,
  "shortcuts": [
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Utility Billing Settings",
-   "link_to": "Utility Billing Settings",
+   "label": "Report Meter Reading",
+   "link_to": "Meter Reading",
+   "report_ref_doctype": "Meter Reading",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Due Invoice Rent",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[[\"Sales Invoice\",\"status\",\"in\",[\"Unpaid\",\"Overdue\",\"Partly Paid\",null],false]]",
    "type": "DocType"
   },
   {

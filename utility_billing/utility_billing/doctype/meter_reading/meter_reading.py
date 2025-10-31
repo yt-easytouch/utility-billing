@@ -58,24 +58,24 @@ class MeterReading(Document):
                 sales_invoice.save(ignore_permissions=True)
                 frappe.db.commit()
 
-    def on_submit(self):
-        settings = frappe.get_single("Utility Billing Settings")
-        if not self.rates or len(self.rates) == 0:
-            frappe.throw(frappe._("Cannot submit Meter Reading. No rates available."))
-        existing_sales_order = frappe.db.exists(
-            {
-                "doctype": "Sales Invoice",
-                "custom_meter_reading": self.name,
-            }
-        )
-        if not existing_sales_order:
-            if settings.sales_order_creation_state == "Draft":
-                sales_order = create_sales_order(self)
-                sales_order.save()
-            else:
-                sales_order = create_sales_order(self)
-                sales_order.save()
-                sales_order.submit()
+    # def on_submit(self):
+    #     # settings = frappe.get_single("Utility Billing Settings")
+    #     # if not self.rates or len(self.rates) == 0:
+    #     #     frappe.throw(frappe._("Cannot submit Meter Reading. No rates available."))
+    #     # existing_sales_order = frappe.db.exists(
+    #     #     {
+    #     #         "doctype": "Sales Invoice",
+    #     #         "custom_meter_reading": self.name,
+    #     #     }
+    #     # )
+    #     # if not existing_sales_order:
+    #     #     if settings.sales_order_creation_state == "Draft":
+    #     #         sales_order = create_sales_order(self)
+    #     #         sales_order.save()
+    #     #     else:
+    #     #         sales_order = create_sales_order(self)
+    #     #         sales_order.save()
+    #     #         sales_order.submit()
 
     def validate_item_readings(self, item):
         """Validate readings for each item."""
@@ -102,7 +102,7 @@ class MeterReading(Document):
                 )
             )
 
-def create_sales_order(meter_reading,from_date,to_date):
+def create_sales_order(meter_reading,from_date,to_date,posting_date,due_date):
     """Create a Sales Order based on the Meter Reading."""
     # sales_order = frappe.get_doc(
     #     {
@@ -134,15 +134,15 @@ def create_sales_order(meter_reading,from_date,to_date):
         sales_order = frappe.get_doc("Sales Invoice", existing_si[0].name)
 
     else:
-        
         customer = find_contract_utility_property(meter_reading.property)
-    
         sales_order = frappe.get_doc(
             {
                 "doctype": "Sales Invoice",
                 "customer": customer,
                 "utility_property": meter_reading.property,
                 "custom_meter_reading": meter_reading.name,
+                "posting_date": posting_date,
+                "due_date": due_date,
                 # "custom_billing_type": '',
                 "set_posting_time": 1,
                 "meter_readings": [],
@@ -168,9 +168,9 @@ def create_sales_order(meter_reading,from_date,to_date):
         sales_order.append("items", rate_dict)
 
     for i in meter_reading.items:
-        prev_reading = get_previous_invoice_reading(
-            item_code =i.item_code, property_number=meter_reading.property, meter_number = i.meter_number
-        )
+        # prev_reading = get_previous_invoice_reading(
+        #     item_code =i.item_code, property_number=meter_reading.property, meter_number = i.meter_number
+        # )
         sales_order.append(
             "meter_readings",
             {
@@ -180,14 +180,16 @@ def create_sales_order(meter_reading,from_date,to_date):
                 "uom": i.uom,
                 "stock_uom": i.stock_uom,
                 "current_reading": i.current_reading,
-                "previous_reading": prev_reading,
+                "previous_reading": i.previous_reading,
                 "consumption": i.consumption,
                 "current_image": i.image,
                 "previous_image": i.previous_image,
             },
         )
-
-    sales_order.insert()
+    if existing_si:
+        sales_order.save(ignore_permissions=True)
+    else:
+        sales_order.insert()
     AccountsController.append_taxes_from_item_tax_template(sales_order)
 
     return sales_order
@@ -528,7 +530,7 @@ def bulk_insert(serial_no, readings):
 def submit_create_invoice(docname, year, month, posting_date, due_date , submit=False):
     """Bulk submit Meter Readings and create Sales Invoices."""
     meter_reading = frappe.get_doc("Meter Reading", docname)
-    if meter_reading.docstatus != 0:
+    if meter_reading.docstatus == 2:
         frappe.throw(frappe._("Meter Reading {0} is not in Draft state.").format(docname))
 
     from datetime import datetime
@@ -536,7 +538,9 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
     from_date = datetime(int(year), int(month), 1)
     end_date = datetime(int(year), int(month) + 1, 1) if month != '12' else datetime(int(year) + 1, 1, 1)
     to_date = end_date - timedelta(days=1)
-    sales_order = create_sales_order(meter_reading,from_date,to_date)
+    posting_date = posting_date if posting_date else nowdate()
+    due_date = due_date if due_date else sales_order.posting_date
+    sales_order = create_sales_order(meter_reading,from_date,to_date,posting_date,due_date)
     sales_order.posting_date = posting_date if posting_date else nowdate()
     sales_order.due_date = due_date if due_date else sales_order.posting_date
     sales_order.from_date = from_date
@@ -555,6 +559,7 @@ def submit_create_invoice(docname, year, month, posting_date, due_date , submit=
             ps.payment_amount = sales_order.grand_total
             ps.invoice_portion = 100
     sales_order.save(ignore_permissions=True)
+    # print(sales_order.as_dict())
     # if submit:
     #     sales_order.submit()
 
