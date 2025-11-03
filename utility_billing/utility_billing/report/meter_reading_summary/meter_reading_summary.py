@@ -12,7 +12,7 @@ def get_columns():
         {"label": _("Type"), "fieldname": "type", "fieldtype": "Data", "hidden": 1, "width": 100},
         {"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 100},
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 120},
-        {"label": _("Property"), "fieldname": "utility_property", "fieldtype": "Link", "options": "Utility Property", "width": 120},
+        {"label": _("Property"), "fieldname": "property", "fieldtype": "Link", "options": "Utility Property", "width": 120},
         {"label": _("Company"), "fieldname": "company", "fieldtype": "Link", "options": "Company", "width": 100},
         {"label": _("Meter Number"), "fieldname": "meter_number", "fieldtype": "Link", "options": "Serial No", "width": 120},
         {"label": _("Item"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
@@ -36,14 +36,14 @@ def get_data(filters):
 		if filters.get("to_date"):
 			conditions["date"] = ["<=", filters["to_date"]]
 
-	for key in ("customer", "utility_property", "company", "name"):  
+	for key in ("customer", "property", "company", "name"):  
 		if filters.get(key):
 			conditions[key] = filters[key]
 
 	readings = frappe.get_all(
 		"Meter Reading",
 		filters=conditions,
-		fields=["name", "date", "customer", "utility_property", "company", "currency",],
+		fields=["name", "date", "customer", "property", "company", "currency",],
 		order_by="date desc, customer"
 	)
 
@@ -78,7 +78,7 @@ def get_data(filters):
 						"type": "Rate",
 						"date": reading.date if not reading_printed and i == 0 else "",
 						"customer": reading.customer if not reading_printed and i == 0 else "",
-						"utility_property": reading.utility_property if not reading_printed and i == 0 else "",
+						"property": reading.property if not reading_printed and i == 0 else "",
 						"company": reading.company if not reading_printed and i == 0 else "",
 						"meter_number": item.meter_number if  i == 0 else "",
 						"item_code": item.item_code if i == 0 else "",
@@ -99,7 +99,7 @@ def get_data(filters):
 					"type": "Item",
 					"date": reading.date if not reading_printed else "",
 					"customer": reading.customer if not reading_printed else "",
-					"utility_property": reading.utility_property if not reading_printed else "",
+					"property": reading.property if not reading_printed else "",
 					"company": reading.company if not reading_printed else "",
 					"meter_number": item.meter_number,
 					"item_code": item.item_code,
