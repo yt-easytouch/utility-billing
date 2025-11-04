@@ -202,36 +202,37 @@ def make_customer(name):
 
 
 def create_customer(doc):
-    if doc.customer:
-        return frappe.get_doc("Customer", doc.customer)
+        frappe.get_doc("Customer", doc.party_name)
+    # if doc.customer:
+    #     return frappe.get_doc("Customer", doc.customer)
     
-    from erpnext.selling.doctype.quotation.quotation import create_customer_from_lead, create_customer_from_prospect
-    from crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings import create_customer_in_erpnext
+    # from erpnext.selling.doctype.quotation.quotation import create_customer_from_lead, create_customer_from_prospect
+    # from crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings import create_customer_in_erpnext
 
-    if doc.service_request_from == "Lead":
-        existing_customer = frappe.db.get_value("Customer", {"lead_name": doc.party_name}, "name")
-        if existing_customer:
-            return frappe.get_doc("Customer", existing_customer)
-        return create_customer_from_lead(doc.party_name, ignore_permissions=True)
+    # if doc.service_request_from == "Lead":
+    #     existing_customer = frappe.db.get_value("Customer", {"lead_name": doc.party_name}, "name")
+    #     if existing_customer:
+    #         return frappe.get_doc("Customer", existing_customer)
+    #     return create_customer_from_lead(doc.party_name, ignore_permissions=True)
     
-    elif doc.service_request_from == "Prospect":
-        existing_customer = frappe.db.get_value("Customer", {"prospect_name": doc.party_name}, "name")
-        if existing_customer:
-            return frappe.get_doc("Customer", existing_customer)
-        return create_customer_from_prospect(doc.party_name, ignore_permissions=True)
+    # elif doc.service_request_from == "Prospect":
+    #     existing_customer = frappe.db.get_value("Customer", {"prospect_name": doc.party_name}, "name")
+    #     if existing_customer:
+    #         return frappe.get_doc("Customer", existing_customer)
+    #     return create_customer_from_prospect(doc.party_name, ignore_permissions=True)
     
-    elif doc.service_request_from == "CRM Deal":
-        existing_customer = frappe.db.get_value("Customer", {"crm_deal": doc.party_name}, "name")
-        if not existing_customer:
-            deal = frappe.get_doc("CRM Deal", doc.party_name)
-            deal.status = "Won"
-            deal.save()
-            create_customer_in_erpnext(deal, None)
-        existing_customer = frappe.db.get_value("Customer", {"crm_deal": doc.party_name}, "name")
-        return frappe.get_doc("Customer", existing_customer)
+    # elif doc.service_request_from == "CRM Deal":
+    #     existing_customer = frappe.db.get_value("Customer", {"crm_deal": doc.party_name}, "name")
+    #     if not existing_customer:
+    #         deal = frappe.get_doc("CRM Deal", doc.party_name)
+    #         deal.status = "Won"
+    #         deal.save()
+    #         create_customer_in_erpnext(deal, None)
+    #     existing_customer = frappe.db.get_value("Customer", {"crm_deal": doc.party_name}, "name")
+    #     return frappe.get_doc("Customer", existing_customer)
     
-    elif doc.service_request_from == "Customer":
-        return frappe.get_doc("Customer", doc.party_name)
+    # elif doc.service_request_from == "Customer":
+    #     return frappe.get_doc("Customer", doc.party_name)
 
 
 def link_contact_and_address_to_customer(customer_doc, doc):
