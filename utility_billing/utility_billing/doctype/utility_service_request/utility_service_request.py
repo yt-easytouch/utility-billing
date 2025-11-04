@@ -192,6 +192,7 @@ def create_contract(name):
 
 @frappe.whitelist()
 def make_customer(name):
+    return customer_doc.name
     """Create a customer from the Utility Service Request."""
     doc = frappe.get_doc("Utility Service Request", name)
     customer_doc = create_customer(doc)
