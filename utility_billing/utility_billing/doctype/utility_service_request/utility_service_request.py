@@ -64,7 +64,7 @@ class UtilityServiceRequest(Document):
                     fields=["name"]
                 )
                 if not existing:
-                    create_meter_assign(self.name,self.customer_name, item.meter_number, item.item_code)
+                    create_meter_assign(self.name,self.party_name, item.meter_number, item.item_code)
 
         # Close old meters not in the new list
         close_old_meter_assignments(self.name, current_meter_serials)
@@ -197,7 +197,7 @@ def make_customer(name):
     doc = frappe.get_doc("Utility Service Request", name)
     customer_doc = create_customer(doc)
     frappe.db.set_value("Utility Service Request", name, "customer", customer_doc.name)
-    frappe.db.set_value("Utility Service Request", name, "customer_name", customer_doc.customer_name)
+    frappe.db.set_value("Utility Service Request", name, "customer_name", customer_doc.party_name)
     return customer_doc.name
 
 
@@ -297,9 +297,9 @@ def create_site_survey(docname):
     )
 
     issue_doc = frappe.new_doc("Issue")
-    issue_doc.subject = f"Site Survey for {docname} ({doc.customer_name})"
+    issue_doc.subject = f"Site Survey for {docname} ({doc.party_name})"
     issue_doc.description = (
-        f"Site survey created for Utility Service Request: {docname}, Customer name: {doc.customer_name}.\n"
+        f"Site survey created for Utility Service Request: {docname}, Customer name: {doc.party_name}.\n"
         f"{' ' + request_type_description if request_type_description else ''}",
     )
     issue_doc.utility_service_request = docname
@@ -728,7 +728,7 @@ def add_transaction_comments(transaction, usr_name, auto_repeat=None):
         doc_type = doc.doctype
         doc_name = doc.name
         customer = doc.customer
-        customer_name = doc.customer_name
+        customer_name = doc.party_name
         amount = doc.grand_total if hasattr(doc, 'grand_total') else doc.base_grand_total
         date_field = 'posting_date' if doc_type == 'Sales Invoice' else 'transaction_date'
         date_value = doc.get_formatted(date_field)
