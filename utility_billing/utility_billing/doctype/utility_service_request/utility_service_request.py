@@ -29,8 +29,7 @@ class UtilityServiceRequest(Document):
         self.validate_child_items()
 
     def set_customer_if_needed(self):
-        if self.service_request_from == "Customer":
-            self.customer = self.party_name
+        self.customer = self.party_name
         
     def before_submit(self):
         self.status = "To Bill"
