@@ -131,7 +131,7 @@ def create_sales_order(meter_reading,from_date,to_date,posting_date,due_date):
                         "to_date": (">=", to_date),
                     },
                     fields=["name"],
-                    order_by="creation desc",
+                    order_by="`tabSales Invoice`.creation desc",
                     limit=1
                 )
 
