@@ -1146,7 +1146,7 @@ def _generate_for_billing_type(
                         "to_date": (">=", eff_start),
                     },
                     fields=["name"],
-                    order_by="creation desc",
+                    order_by="`tabSales Invoice`.creation desc",
                     limit=1
                 )
 
